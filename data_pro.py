@@ -2,7 +2,8 @@ import tensorflow as tf
 import numpy as np
 from DataGenerator import SimpleSequence
 from zca_whitening import ZCA
-
+import params
+import random
 
 class data_processing:
     def get_data(batch_size = 128, cifar = True, svhn= False, semi = True, whiten = False):
@@ -30,11 +31,17 @@ class data_processing:
             y = np.concatenate((y_train, y_test))
             y = tf.keras.utils.to_categorical(y)
             
+            
+            random.seed(params.seedd)
+            index_list = (list(range(60000)))
+            random.shuffle(index_list)
+            
             # train-validation-test split
             if semi == True:
-              data_split = {'trainIDs': range(49000), 'valIDs': range(49000, 50000), 'testIDs': range(50000, 60000)}
+              data_split = {'trainIDs': index_list[:49000], 'valIDs': index_list[49000:50000], 'testIDs': index_list[50000:60000]}
+              print(data_split['trainIDs'][:5])
             else:
-              data_split = {'trainIDs': range(4000), 'valIDs': range(4000, 50000), 'testIDs': range(50000, 60000)}
+              data_split = {'trainIDs': index_list[:4000], 'valIDs': index_list[49000:50000], 'testIDs': index_list[50000:60000]}
             # an indicator array indicatig whether a training example is labeled
             labeled = np.ones((60000, ), dtype = bool)
             

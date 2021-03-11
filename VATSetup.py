@@ -98,31 +98,19 @@ class VATModel(tf.keras.Model):
         predl  = pred[:n_labeled, ...]
         predul = pred[n_labeled:, ...]
         # supervised loss
-        loss_sup = self.loss(yl, predl)
-
-        it=0
-        max_it = params.iterations
-        
-        while it < max_it:       
+        loss_sup = self.loss(yl, predl)   
                        
-            # supervised adversarial examples
-            if params.organic_vat:
-                predl = tf.stop_gradient(predl)
-                xl_adv = Attacks.virtual_L2_attack(self, xl, predl)
-            else:
-                xl_adv = Attacks.L2_attack(self, xl, yl)
+        # supervised adversarial examples
+        if params.organic_vat:
+            predl = tf.stop_gradient(predl)
+            xl_adv = Attacks.virtual_L2_attack(self, xl, predl)
+        else:
+            xl_adv = Attacks.L2_attack(self, xl, yl)
+                       
+        # virtual adversarial examples
+        predul = tf.stop_gradient(predul)             
+        xul_adv = Attacks.virtual_L2_attack(self, xul, predul)
                 
-            xl = xl_adv
-                    
-            
-            # virtual adversarial examples
-            predul = tf.stop_gradient(predul)             
-            xul_adv = Attacks.virtual_L2_attack(self, xul, predul)
-            
-            xul = xul_adv
-            
-            it = it+1   
-            
         x_adv = tf.concat((xl_adv, xul_adv), axis = 0)
         y_adv = tf.concat((yl, predul), axis = 0)
             

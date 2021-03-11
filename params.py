@@ -13,11 +13,13 @@ seedd = 1
 
 CIFAr = True
 SVHn = False
-whiten = True 
+whiten = False 
 activation = tf.keras.layers.LeakyReLU(alpha=0.1)
 batchNorm = True
 one_hot = True
 organic_vat = True
 semi = True
 model_large = False
-iterations = 1
+iterations = 10
+step_size = 0.1
+runeager = False

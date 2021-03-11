@@ -35,8 +35,8 @@ def scheduler(epoch, lr):
         print(f'Learning rate: {round(lr,8)}')
         return lr
     else:              
-        print(f'Learning rate: {round((lr - (lr/48)*(epoch-75)),8)}')
-        return lr - (lr/48)*(epoch-75)
+        print(f'Learning rate: {round((lr - ((lr-0.00001)/48)*(epoch-75)),8)}')
+        return lr - ((lr-0.0001)/48)*(epoch-75)
     
 opt = tf.keras.optimizers.Adam(learning_rate = lr)
 
@@ -47,7 +47,7 @@ metrics = [getattr(tf.keras.metrics, metric_class)(name = ('%s_%s' % (metric_typ
            for metric_type in ['sup', 'ladv', 'uladv', 'adv']
            for metric_class, metric_name in zip(['CategoricalAccuracy'], ['acc'])]
 
-run_eagerly = False
+run_eagerly = params.runeager
     
 model.compile(optimizer = opt, loss = KLD.kl_divergence,
     metrics = metrics, run_eagerly = run_eagerly)
@@ -71,10 +71,26 @@ print(f'Epochs: {epochs}')
 print(' ')
     
 import time    
-start = time.time() 
+start = time.time()
+ 
+from datetime import datetime
+now = datetime.now()
+dt_string = now.strftime("%d_%m-%H.%M")
 
-csv_logger = tf.keras.callbacks.CSVLogger(filename = f'training.csv', separator=",", append = False)
-callback = [lr_scheduler,csv_logger]
+import os
+root_dir = "/content/gdrive/My Drive/Thesis/Results/"
+project_folder = f"CIFAR:{CIFAR}_SSL:{semi}_epochs:{epochs}_lr:{lr}_largemodel:{params.model_large}_iterations:{params.iterations}_onehot:{params.one_hot}_datetime:{dt_string}/"
+if os.path.isdir(root_dir + project_folder) == False:
+  os.mkdir(root_dir + project_folder)
+  print(root_dir + project_folder + ' did not exist but was created.')
+folder = root_dir+project_folder
+path = f"{folder}/training_metrics.csv"
+
+csv_logger = tf.keras.callbacks.CSVLogger(filename = path, separator=",", append = False)
+
+mcp_save = tf.keras.callbacks.ModelCheckpoint(f'{folder}/model.hdf5', save_best_only=True, monitor='val_loss', mode='min')
+
+callback = [lr_scheduler,csv_logger,mcp_save]
 
 history = model.fit(x = train_gen,
                     epochs = epochs,
@@ -83,7 +99,6 @@ history = model.fit(x = train_gen,
                     callbacks=callback)
 
 print('Training time: %.1f seconds.' % (time.time() - start))
-
 #%% Evaluate the model on the test set
 metric_values = model.evaluate(test_gen)
 
@@ -108,9 +123,13 @@ for metric_name, metric_value in zip(model.metrics_names, metric_values):
     
 #%%
 import pandas as pd
+metric_df = pd.DataFrame()
+metric_df['metric'] = model.metrics_names
+metric_df['metric_values'] = metric_values
+metric_df.to_csv(path_or_buf = f'{folder}test_metrics.csv', index = False)
 
-metric_df = pd.read_csv('training.csv')
-
-metric_df.plot(x='epoch', y='val_sup_acc', style='-')
-
-metric_df.plot(x='epoch', y='loss', style='-')
+#%%
+#import pandas as pd
+#metric_df = pd.read_csv('training.csv')
+#metric_df.plot(x='epoch', y='val_sup_acc', style='-')
+#metric_df.plot(x='epoch', y='loss', style='-')
